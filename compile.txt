@@ -1,0 +1,3 @@
+gcc -c Linha_rev.c -lGL -lGLU -lglut
+gcc -o Linha_rev Linha_rev.c -lGL -lGLU -lglut
+./Linha_rev
