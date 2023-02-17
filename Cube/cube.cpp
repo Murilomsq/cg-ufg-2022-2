@@ -6,18 +6,20 @@
 #include "glm/gtc/type_ptr.hpp"
 
 #include "Camera.h"
-
+float deltaTime = 0.0f;	// Time between current frame and last frame
+float lastFrame = 0.0f; // Time of last frame
 
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 GLuint program;
 unsigned int VBO, cubeVAO;
-glm::vec3 cameraPos = glm::vec3(1.0f, 0.0f, 3.0f);
+glm::vec3 cameraPos = glm::vec3(1.0f, 1.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 float* transformPointOrtho(float* vec3, float nearPlane);
 
 float vertices[] = {
+    
     // positions          // normals         
     -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  
     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  
@@ -40,12 +42,6 @@ float vertices[] = {
     -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 
     -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  
 
-    0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 
-    0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  
-    0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  
-    0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  
-    0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  
-    0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 
 
     -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 
     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 
@@ -54,13 +50,29 @@ float vertices[] = {
     -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  
     -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 
 
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 
-    0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  
-    0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  
-    0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  
-    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+
 };
+
+void keyboard(unsigned char key, int x, int y) {
+    float cameraSpeed = 0.1f * deltaTime;
+    switch (key) {
+    case 'w':
+      cameraPos += cameraSpeed * cameraFront;
+      break;
+    case 's':
+      cameraPos -= cameraSpeed * cameraFront;
+      break;
+    case 'a':
+      cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+      break;
+    case 'd':
+      cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+      break;
+    case 'c':
+        cameraFront *= -1;
+    break;
+    }
+}
 
 char* read_file(const char* filename) {
     FILE* file = fopen(filename, "rb");
@@ -86,9 +98,14 @@ char* read_file(const char* filename) {
 
 
 void display() {
+
+    float currentFrame = glutGet(GLUT_ELAPSED_TIME);
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+
     glClear(GL_DEPTH_BUFFER_BIT);
 
-
+    
     glClearColor(0.12f, 0.22f, 0.22f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
@@ -105,6 +122,8 @@ void display() {
     unsigned int modelLoc = glGetUniformLocation(program, "model");
     unsigned int viewLoc = glGetUniformLocation(program, "view");
     unsigned int projectionLoc = glGetUniformLocation(program, "projection");
+    unsigned int camPosLoc = glGetUniformLocation(program, "camPos");
+
     
     
 
@@ -112,13 +131,12 @@ void display() {
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
-
-    
-
+    glUniform3fv(camPosLoc, 1, &cameraPos[0]);
     
     
     glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glDrawArrays(GL_TRIANGLES, 0, 24);
+    glutPostRedisplay();
     glutSwapBuffers();
 }
 
@@ -197,11 +215,13 @@ int main(int argc, char** argv) {
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(800, 600);
     glutCreateWindow("Cube");
+    
 
     // Initialize GLEW
     glewInit();
     init();
     glutDisplayFunc(display);
+    glutKeyboardFunc(keyboard);
     glutMainLoop();
     return 0;
 }
